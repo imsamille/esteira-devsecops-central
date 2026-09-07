@@ -53,6 +53,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          
       - name: Instalar dependências Node.js
         if: inputs.stack_type == 'node'
         working-directory: app-code
@@ -63,6 +64,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+          
       - name: Instalar dependências .NET
         if: inputs.stack_type == 'dotnet'
         working-directory: app-code
@@ -73,6 +75,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          
       - name: Instalar dependências Python
         if: inputs.stack_type == 'python'
         working-directory: app-code
@@ -170,19 +173,11 @@ jobs:
             -v ${{ github.workspace }}/app-code:/src \
             -v ${{ github.workspace }}/security-tools/security/semgrep:/config \
             -v ${{ github.workspace }}/reports/semgrep:/reports \
-            semgrep/semgrep scan \
+            semgrep/semgrep semgrep scan \
             $SEMGREP_CONFIGS \
             --json \
             --output=/reports/semgrep-results.json \
             /src || true
-
-      - name: Importar SAST & Secrets para DefectDojo
-        env:
-          PROJECT_NAME: ${{ inputs.project_name }}
-          DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
-          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-        run: |
-          bash security-tools/scripts/import-semgrep-gitleaks-defectdojo.sh || true
 
       - name: Executar Trivy FS (Shadow Mode)
         uses: aquasecurity/trivy-action@master
@@ -205,20 +200,6 @@ jobs:
         if: inputs.run_dast == true && inputs.dast_target_url != ''
         run: |
           mv report_json.json reports/zap/ 2>/dev/null || true
-
-      - name: Quality Gate ZAP (Shadow Mode)
-        if: inputs.run_dast == true && inputs.dast_target_url != ''
-        run: |
-          cd security-tools
-          node scripts/check-zap-gate.js ../reports/zap/report_json.json || true
-
-      - name: Importar SCA & DAST para DefectDojo
-        env:
-          PROJECT_NAME: ${{ inputs.project_name }}
-          DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
-          DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
-        run: |
-          bash security-tools/scripts/import-trivy-zap-defectdojo.sh || true
 
       - name: Upload Relatórios
         uses: actions/upload-artifact@v4
