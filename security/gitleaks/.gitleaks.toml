@@ -19,7 +19,13 @@ paths = [
     '''(^|/)docs/''',
     '''package-lock\.json$''',
     '''yarn\.lock$''',
-    '''npm-shrinkwrap\.json$'''
+    '''npm-shrinkwrap\.json$''',
+    '''(^|/)vendor/''',
+    '''go\.sum$''',
+    '''\.o$''',
+    '''\.obj$''',
+    '''(^|/)cmake-build-.*/''',
+    '''(^|/)target/'''
 ]
 
 regexes = [
@@ -96,3 +102,21 @@ id = "detectar-chave-rsa-custom"
 description = "Regra PBI-12: Detecta vazamento de chave privada RSA para testes controlados"
 regex = '''-----BEGIN RSA PRIVATE KEY-----'''
 tags = ["pbi-12", "test", "rsa"]
+
+# --- REGRA PARA SECRETS EM ARQUIVOS DE CONFIGURAÇÃO (C/C++, Go, .env) ---
+[[rules]]
+id = "hardcoded-secret-in-config-files"
+description = "detecta possíveis secrets hardcoded em arquivos de configuração como config.h, config.go e .env"
+regex = '''(?i)(api_key|api_secret|secret_key|auth_token|access_token|private_key|db_password|database_url)\s*[:=]\s*['"]?[A-Za-z0-9_\-/+=]{16,}['"]?'''
+path = '''(config\.h|config\.go|\.env|\.env\.\w+|secrets\.go|credentials\.h)$'''
+tags = ["config", "secret", "c-cpp", "go"]
+
+[rules.allowlist]
+description = "ignora placeholders e valores de exemplo em configs"
+regexes = [
+    '''your[_-]?api[_-]?key''',
+    '''<API_KEY>''',
+    '''INSERT_KEY_HERE''',
+    '''CHANGE_ME''',
+    '''example[_-]?token'''
+]

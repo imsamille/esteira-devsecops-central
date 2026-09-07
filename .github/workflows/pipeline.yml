@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       stack_type:
-        description: 'Stack do projeto (node, dotnet, python, java)'
+        description: 'Stack do projeto (node, dotnet, python, java, cpp, go, rust)'
         required: true
         type: string
       run_dast:
@@ -96,6 +96,44 @@ jobs:
           fi
         working-directory: app-code
 
+      - name: Preparar ambiente C/C++
+        if: inputs.stack_type == 'cpp'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
+
+      - name: Compilar projeto C/C++
+        if: inputs.stack_type == 'cpp'
+        working-directory: app-code
+        run: |
+          if [ -f "CMakeLists.txt" ]; then
+            mkdir -p build && cd build && cmake .. && make || true
+          elif [ -f "Makefile" ]; then
+            make || true
+          fi
+
+      - name: Preparar ambiente Go
+        if: inputs.stack_type == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Instalar dependências Go
+        if: inputs.stack_type == 'go'
+        working-directory: app-code
+        run: |
+          if [ -f go.mod ]; then go mod download; fi
+
+      - name: Preparar ambiente Rust
+        if: inputs.stack_type == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Instalar dependências Rust
+        if: inputs.stack_type == 'rust'
+        working-directory: app-code
+        run: |
+          if [ -f Cargo.toml ]; then cargo fetch || true; fi
+
       - name: Executar Gitleaks (Shadow Mode)
         run: |
           mkdir -p reports/gitleaks
@@ -113,14 +151,28 @@ jobs:
       - name: Executar Semgrep (Shadow Mode)
         run: |
           mkdir -p reports/semgrep
+          SEMGREP_CONFIGS="--config p/owasp-top-ten --config /config/rules.yaml"
+          if [ "${{ inputs.stack_type }}" = "node" ]; then
+            SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/nodejs"
+          elif [ "${{ inputs.stack_type }}" = "python" ]; then
+            SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/python"
+          elif [ "${{ inputs.stack_type }}" = "java" ]; then
+            SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/java"
+          elif [ "${{ inputs.stack_type }}" = "dotnet" ]; then
+            SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/csharp"
+          elif [ "${{ inputs.stack_type }}" = "cpp" ]; then
+            SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/c"
+          elif [ "${{ inputs.stack_type }}" = "go" ]; then
+            SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/golang"
+          elif [ "${{ inputs.stack_type }}" = "rust" ]; then
+            SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/rust"
+          fi
           docker run --rm \
             -v ${{ github.workspace }}/app-code:/src \
             -v ${{ github.workspace }}/security-tools/security/semgrep:/config \
             -v ${{ github.workspace }}/reports/semgrep:/reports \
             semgrep/semgrep scan \
-            --config "p/owasp-top-ten" \
-            --config "p/nodejs" \
-            --config "/config/rules.yaml" \
+            $SEMGREP_CONFIGS \
             --json \
             --output=/reports/semgrep-results.json \
             /src || true

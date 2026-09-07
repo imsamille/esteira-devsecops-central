@@ -147,3 +147,152 @@ rules:
       owasp: "A01:2021 - Broken Access Control"
       cwe: "CWE-285"
       category: "access control"
+
+  # ============================================================
+  # regras customizadas para C/C++
+  # foco em riscos comuns de segurança em aplicações C e C++
+  # ============================================================
+
+  - id: cpp-unsafe-string-functions
+    pattern-either:
+      - pattern: strcpy(...)
+      - pattern: strcat(...)
+      - pattern: sprintf(...)
+      - pattern: gets(...)
+    message: "uso de função insegura de manipulação de string/buffer detectado. essas funções não verificam o tamanho do destino e podem causar buffer overflow. utilizar alternativas seguras como strncpy, strncat, snprintf ou fgets."
+    languages:
+      - c
+      - cpp
+    severity: ERROR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-120/CWE-121"
+      category: "buffer overflow"
+
+  - id: cpp-malloc-without-null-check
+    patterns:
+      - pattern: |
+          $PTR = malloc(...);
+          ...
+          *$PTR;
+      - pattern-not: |
+          $PTR = malloc(...);
+          ...
+          if ($PTR == NULL) { ... }
+          ...
+          *$PTR;
+      - pattern-not: |
+          $PTR = malloc(...);
+          ...
+          if (!$PTR) { ... }
+          ...
+          *$PTR;
+    message: "uso de malloc sem verificação de retorno NULL detectado. se a alocação falhar, o ponteiro será NULL e o acesso causará comportamento indefinido. sempre verificar o retorno de malloc antes de usar o ponteiro."
+    languages:
+      - c
+      - cpp
+    severity: WARNING
+    metadata:
+      owasp: "A06:2021 - Vulnerable and Outdated Components"
+      cwe: "CWE-476"
+      category: "null pointer dereference"
+
+  - id: cpp-command-injection
+    pattern-either:
+      - pattern: system(...)
+      - pattern: popen(...)
+      - pattern: execl(...)
+      - pattern: execlp(...)
+      - pattern: execle(...)
+      - pattern: execv(...)
+      - pattern: execvp(...)
+      - pattern: execvpe(...)
+    message: "uso de system(), popen() ou exec*() detectado. essas funções podem permitir injeção de comandos se o input não for devidamente sanitizado. considerar alternativas mais seguras ou validar rigorosamente os parâmetros."
+    languages:
+      - c
+      - cpp
+    severity: ERROR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-78"
+      category: "command injection"
+
+  - id: cpp-integer-overflow-risk
+    pattern-either:
+      - pattern: (int)$X
+      - pattern: (short)$X
+      - pattern: (char)$X
+    message: "cast explícito de tipo inteiro detectado. conversões entre tipos de tamanhos diferentes podem causar truncamento ou overflow de inteiros. verificar se o valor de origem cabe no tipo de destino."
+    languages:
+      - c
+      - cpp
+    severity: WARNING
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-190"
+      category: "integer overflow"
+
+  # ============================================================
+  # regras customizadas para Go
+  # foco em riscos comuns de segurança em aplicações Go
+  # ============================================================
+
+  - id: go-command-injection
+    pattern-either:
+      - pattern: exec.Command($CMD, ...)
+      - pattern: exec.CommandContext($CTX, $CMD, ...)
+    message: "uso de exec.Command detectado. se o comando ou seus argumentos vierem de input externo, isso pode permitir injeção de comandos. validar e sanitizar todos os parâmetros antes de executar."
+    languages:
+      - go
+    severity: ERROR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-78"
+      category: "command injection"
+
+  - id: go-ignored-error
+    pattern-either:
+      - pattern: |
+          $X, _ = $FN(...)
+      - pattern: |
+          $X, _ := $FN(...)
+    message: "erro ignorado detectado. em go, erros devem ser sempre tratados, especialmente em operações de segurança, I/O e rede. ignorar erros pode ocultar falhas críticas."
+    languages:
+      - go
+    severity: WARNING
+    metadata:
+      owasp: "A09:2021 - Security Logging and Monitoring Failures"
+      cwe: "CWE-754"
+      category: "error handling"
+
+  - id: go-weak-hash
+    pattern-either:
+      - pattern: md5.New()
+      - pattern: md5.Sum(...)
+      - pattern: sha1.New()
+      - pattern: sha1.Sum(...)
+    message: "algoritmo de hash fraco detectado (md5 ou sha1). para dados sensíveis como senhas ou tokens, utilizar sha256, sha512 ou bcrypt."
+    languages:
+      - go
+    severity: ERROR
+    metadata:
+      owasp: "A02:2021 - Cryptographic Failures"
+      cwe: "CWE-327"
+      category: "cryptography"
+
+  - id: go-sql-string-concat
+    pattern-either:
+      - pattern: |
+          $DB.Query(fmt.Sprintf(...))
+      - pattern: |
+          $DB.Exec(fmt.Sprintf(...))
+      - pattern: |
+          $DB.QueryRow(fmt.Sprintf(...))
+    message: "possível sql injection por concatenação de string em query. utilizar parâmetros ($1, $2 ou ?) e prepared statements em vez de fmt.Sprintf para construir queries."
+    languages:
+      - go
+    severity: ERROR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-89"
+      category: "sql injection"

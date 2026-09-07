@@ -16,7 +16,7 @@ jobs:
     uses: alexiaduartt/Esteira-DevSecOps-Open-Source/.github/workflows/pipeline.yml@v1
     with:
       project_name: 'meu-projeto'
-      stack_type: 'node' # opções: node, dotnet, python
+      stack_type: 'node' # opções: node, dotnet, python, java, cpp, go, rust
       run_dast: true
       dast_target_url: 'https://staging.meu-projeto.com' # URL para o ZAP (necessário se run_dast=true)
     secrets:
@@ -26,7 +26,7 @@ jobs:
 
 **Benefícios:**
 - **Shadow Mode**: As ferramentas de segurança reportam vulnerabilidades como `::warning::` e as enviam para o DefectDojo sem bloquear ou quebrar a sua pipeline.
-- **Agnóstico**: Suporte integrado para múltiplos ecossistemas (`node`, `dotnet`, `python`).
+- **Agnóstico**: Suporte integrado para múltiplos ecossistemas (`node`, `dotnet`, `python`, `java`, `cpp`, `go`, `rust`). Veja [docs/suporte-linguagens.md](docs/suporte-linguagens.md) para detalhes de cobertura por scanner.
 - **DefectDojo Dinâmico**: Engajamentos e importação de relatórios ocorrem de forma automatizada via variáveis.
 
 ## Arquitetura e Ferramentas
