@@ -80,14 +80,14 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Setup Java (Maven/Gradle)
-        if: ${{ inputs.stack_type == 'java' }}
+        if: inputs.stack_type == 'java'
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
           
       - name: Install Java Dependencies
-        if: ${{ inputs.stack_type == 'java' }}
+        if: inputs.stack_type == 'java'
         run: |
           if [ -f "pom.xml" ]; then
             mvn clean install -DskipTests || true
@@ -136,7 +136,6 @@ jobs:
 
       - name: Executar Gitleaks (Shadow Mode)
         run: |
-          mkdir -p reports/gitleaks
           docker run --rm \
             -v ${{ github.workspace }}/app-code:/code \
             -v ${{ github.workspace }}/security-tools/security/gitleaks:/config \
@@ -205,14 +204,12 @@ jobs:
       - name: Mover relatórios ZAP
         if: inputs.run_dast == true && inputs.dast_target_url != ''
         run: |
-          mkdir -p reports/zap
           mv report_json.json reports/zap/ 2>/dev/null || true
 
       - name: Quality Gate ZAP (Shadow Mode)
         if: inputs.run_dast == true && inputs.dast_target_url != ''
         run: |
           cd security-tools
-          npm install fs || true
           node scripts/check-zap-gate.js ../reports/zap/report_json.json || true
 
       - name: Importar SCA & DAST para DefectDojo

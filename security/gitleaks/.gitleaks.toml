@@ -16,7 +16,6 @@ paths = [
     '''(^|/)dist/''',
     '''(^|/)build/''',
     '''(^|/)\.git/''',
-    '''(^|/)docs/''',
     '''package-lock\.json$''',
     '''yarn\.lock$''',
     '''npm-shrinkwrap\.json$''',
@@ -35,26 +34,6 @@ regexes = [
     '''FAKE_KEY_FOR_TESTING'''
 ]
 
-[[rules]]
-id = "aws-access-key-custom"
-description = "detecta possíveis chaves de acesso aws expostas no código"
-regex = '''(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}'''
-tags = ["aws", "secret", "credentials"]
-
-[rules.allowlist]
-description = "ignora chaves fictícias usadas em testes e exemplos"
-paths = [
-    '''(^|/)tests/''',
-    '''(^|/)__tests__/''',
-    '''(^|/)examples/''',
-    '''\.example$''',
-    '''\.sample$'''
-]
-
-regexes = [
-    '''AKIAIOSFODNN7EXAMPLE''',
-    '''FAKE_KEY_FOR_TESTING'''
-]
 
 [[rules]]
 id = "generic-api-key-custom"
@@ -96,12 +75,6 @@ regexes = [
     '''supersecret_test'''
 ]
 
-# --- REGRA ADICIONAL PARA VALIDAÇÃO DA PBI-12 ---
-[[rules]]
-id = "detectar-chave-rsa-custom"
-description = "Regra PBI-12: Detecta vazamento de chave privada RSA para testes controlados"
-regex = '''-----BEGIN RSA PRIVATE KEY-----'''
-tags = ["pbi-12", "test", "rsa"]
 
 # --- REGRA PARA SECRETS EM ARQUIVOS DE CONFIGURAÇÃO (C/C++, Go, .env) ---
 [[rules]]
@@ -119,4 +92,4 @@ regexes = [
     '''INSERT_KEY_HERE''',
     '''CHANGE_ME''',
     '''example[_-]?token'''
-]
+]

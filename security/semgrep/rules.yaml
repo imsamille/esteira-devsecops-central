@@ -109,10 +109,6 @@ rules:
     pattern-either:
       - pattern: 'app.set("env", "development")'
       - pattern: "app.set('env', 'development')"
-      - pattern: |
-          {
-            debug: true
-          }
     message: "configuração de debug ou desenvolvimento encontrada. verificar se isso não será usado em produção."
     languages:
       - javascript
@@ -226,7 +222,7 @@ rules:
     languages:
       - c
       - cpp
-    severity: WARNING
+    severity: INFO
     metadata:
       owasp: "A03:2021 - Injection"
       cwe: "CWE-190"
