@@ -1,88 +1,114 @@
-# Esteira DevSecOps Open Source
+# Central DevSecOps - Reusable Workflow (SaaS Interno)
 
-[![Pipeline Base - GitHub Actions](https://github.com/alexiaduartt/Esteira-DevSecOps-Open-Source/actions/workflows/pipeline.yml/badge.svg)](https://github.com/alexiaduartt/Esteira-DevSecOps-Open-Source/actions/workflows/pipeline.yml)
+[![Pipeline Base - GitHub Actions](https://github.com/imsamille/esteira-devsecops-central-consolidada/actions/workflows/pipeline.yml/badge.svg)](https://github.com/imsamille/esteira-devsecops-central-consolidada/actions/workflows/pipeline.yml)
 
-## Visão Geral
-Este projeto propõe o desenvolvimento de uma esteira DevSecOps utilizando ferramentas open source e acessíveis. O foco é garantir que a segurança não seja tratada apenas ao final do ciclo, mas esteja presente desde o versionamento do código até a análise de vulnerabilidades e geração de relatórios.
+Este repositório centraliza uma esteira DevSecOps modular e reutilizável baseada em GitHub Actions e ferramentas open source. Qualquer squad pode plugar seus repositórios à esteira chamando o workflow central, sem duplicar scripts ou configurações complexas.
 
-## 🚀 Como Utilizar a Central DevSecOps (SaaS Interno)
-Este repositório atua como uma **Central DevSecOps** reutilizável. As squads podem integrar as verificações de segurança em suas próprias pipelines sem duplicar código.
+---
 
-Adicione o seguinte job ao seu `.github/workflows/ci.yml`:
+## Como Integrar a Esteira no Seu Projeto
+
+No repositório da sua squad, crie o arquivo `.github/workflows/devsecops-ci.yml` com a estrutura abaixo:
 
 ```yaml
+name: DevSecOps CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
 jobs:
   security:
-    uses: alexiaduartt/Esteira-DevSecOps-Open-Source/.github/workflows/pipeline.yml@v1
+    uses: imsamille/esteira-devsecops-central-consolidada/.github/workflows/pipeline.yml@main
     with:
-      project_name: 'meu-projeto'
-      stack_type: 'node' # opções: node, dotnet, python, java, cpp, go, rust
-      run_dast: true
-      dast_target_url: 'https://staging.meu-projeto.com' # URL para o ZAP (necessário se run_dast=true)
+      project_name: 'nome-do-seu-projeto'
+      stack_type: 'node' # Opções: node, dotnet, python, java, cpp, go, rust
+      run_dast: false    # Ative (true) apenas se tiver ambiente web acessível configurado
+      dast_target_url: '' # URL alvo para análise dinâmica (obrigatório se run_dast: true)
     secrets:
       DEFECTDOJO_URL: ${{ secrets.DEFECTDOJO_URL }}
       DEFECTDOJO_API_KEY: ${{ secrets.DEFECTDOJO_API_KEY }}
 ```
 
-**Benefícios:**
-- **Shadow Mode**: As ferramentas de segurança reportam vulnerabilidades como `::warning::` e as enviam para o DefectDojo sem bloquear ou quebrar a sua pipeline.
-- **Agnóstico**: Suporte integrado para múltiplos ecossistemas (`node`, `dotnet`, `python`, `java`, `cpp`, `go`, `rust`). Veja [docs/suporte-linguagens.md](docs/suporte-linguagens.md) para detalhes de cobertura por scanner.
-- **DefectDojo Dinâmico**: Engajamentos e importação de relatórios ocorrem de forma automatizada via variáveis.
+### Tabela de Parâmetros
 
-## Arquitetura e Ferramentas
-A esteira é composta por um fluxo integrado de segurança e qualidade:
+| **Campo**         | **Tipo** | **Obrigatório** | **Padrão** | **Descrição**                                                               |
+| ----------------- | -------- | --------------- | ---------- | --------------------------------------------------------------------------- |
+| `project_name`    | String   | **Sim**         | -          | Identificador do projeto nos relatórios e no DefectDojo.                    |
+| `stack_type`      | String   | **Sim**         | -          | Stack do projeto (`node`, `dotnet`, `python`, `java`, `cpp`, `go`, `rust`). |
+| `run_dast`        | Boolean  | Não             | `false`    | Execução de análise dinâmica via OWASP ZAP.                                 |
+| `dast_target_url` | String   | Não             | `''`       | URL pública ou container em execução para teste DAST.<br>                   |
 
-**Fluxo de Execução:**
-GitLeaks → GitHub → GitHub Actions → Build/Testes → Semgrep → Trivy → OWASP ZAP → DefectDojo → Grafana.
+### Configuração de Secrets (`secrets`)
 
-### Detalhamento das Ferramentas:
-* **GitHub**: Utilizado para versionamento e colaboração da equipe.
-* **GitLeaks**: Identificação de possíveis credenciais e segredos expostos.
-* **GitHub Actions**: Responsável pela automação de toda a pipeline.
-* **Semgrep**: Realiza a análise estática de segurança do código (SAST).
-* **Trivy**: Executa verificações em dependências e imagens Docker (SCA).
-* **OWASP ZAP**: Analisa a aplicação em tempo de execução (DAST).
-* **DefectDojo**: Centraliza os resultados de segurança para gestão de vulnerabilidades.
-* **Grafana**: Utilizado para a visualização de indicadores e acompanhamento por dashboards.
+Os segredos são opcionais na chamada da esteira:
 
-## Boas Práticas de Desenvolvimento
+* **Com DefectDojo integrado:** Cadastre `DEFECTDOJO_URL` e `DEFECTDOJO_API_KEY` na aba **Settings > Secrets and variables > Actions** do repositório da sua aplicação.
 
-Para manter o repositório organizado e a esteira DevSecOps eficiente, seguimos este fluxo de trabalho:
+* **Sem DefectDojo configurado:** A esteira executa normalmente sem interromper o fluxo. Para evitar erros sintáticos do GitHub Actions, forneça valores dummy diretamente nas Secrets do repositório (`http://placeholder.local` e `dummy-token`), ou declare os secrets vazios na chamada.
 
-### Gestão de Branches e Fluxo de PBI
-* **Main Protegida**: A branch `main` é exclusiva para versões estáveis e finalizadas. Ninguém deve subir código diretamente nela.
-* **Branch por PBI**: Para cada tarefa ou PBI, deve ser criada uma branch nova a partir da `develop` (ex: `feat/PBI-04-testes`).
-* **Integração na Develop**: Quando terminar a sua PBI, abra um Pull Request para a branch `develop`. Após a aprovação e o merge, a sua branch de tarefa deve ser eliminada.
-* **Sincronização**: Mantenha a sua branch de PBI atualizada com a `develop` para evitar conflitos de código.
+## Camadas de Segurança e Ferramentas
 
-### Commits e Mensagens
-* **Commits Atómicos**: Realize commits pequenos que representem uma única alteração para facilitar o rastreio de erros.
-* **Mensagens Claras**: Utilize mensagens que descrevam o que foi feito, como por exemplo: `feat: adiciona configuração do jest via docker`.
-* **Atribuição**: Garanta que o seu nome e e-mail estão configurados corretamente no Git local para que os commits fiquem identificados corretamente.
+=
 
-### Governança e Segurança
-* **Fluxo de Pull Request (PR)**: É obrigatório abrir um PR para integrar código; todo o PR precisa de pelo menos uma aprovação de outro membro do squad.
-* **Testes Unitários**: Execute a base de testes localmente via Docker antes de subir o seu código para garantir a integridade do ambiente.
-* **Proteção de Segredos**: Nunca suba senhas ou chaves de API; o GitLeaks irá barrar commits com dados sensíveis.
+```text
+[Código da Squad]
+       │
+       ▼
+ 1. GitLeaks ─────────► Secret Scanning (Detecta tokens, senhas e chaves privadas)
+       │
+       ▼
+ 2. Semgrep ──────────► SAST (Análise estática de vulnerabilidades e Dockerfiles)
+       │
+       ▼
+ 3. Trivy FS ─────────► SCA (CVEs em bibliotecas terceiras: npm, nuget, pip, etc.)
+       │
+       ▼
+ 4. OWASP ZAP ────────► DAST (Análise dinâmica web - ativado sob demanda)
+       │
+       ▼
+[Upload de Relatórios (devsecops-reports.zip)]
 
-## Guia Rápido de Termos do GitHub
+```
 
-* **Pull Request (PR)**: É um pedido de autorização para integrar o seu código na branch principal após revisão.
-* **Code Review**: Processo onde um colega analisa o seu PR e dá o "Approve".
-* **Merge**: O ato de unir as alterações de uma branch noutra (ex: PBI para a Develop).
-* **Branch**: Uma linha do tempo paralela para trabalhar numa tarefa sem quebrar o código principal.
-* **Commit**: Um ponto de salvamento do seu trabalho com uma mensagem explicativa.
+* **GitLeaks:** Varre histórico e árvore de commits em busca de credenciais em texto puro.
+* **Semgrep (SAST Otimizado):** Avalia regras OWASP Top 10 e padrões inseguros com filtros contextuais para a stack indicada, eliminando ruído sintático e arquivos irrelevantes.
+* **Trivy (SCA):** Detecta CVEs ativas em lockfiles de dependências (`package-lock.json`, `yarn.lock`, `.csproj`, etc.).
+* **OWASP ZAP (DAST):** Scan dinâmico de aplicações web em execução.
+* **DefectDojo & Grafana:** Gestão centralizada de vulnerabilidades e dashboards consolidados.
 
-## Equipe:
+## O que é o Shadow Mode?
+
+Esta esteira roda por padrão em **Shadow Mode** (`exit-code: 0` e tratamento de erros permissivo):
+
+* **Não quebra a esteira produtiva:** O time de desenvolvimento continua trabalhando sem bloqueios imediatos.
+
+* **Gera visibilidade total:** Relatórios JSON completos de cada scanner são empacotados e disponibilizados na aba **Actions > Artifacts** (`devsecops-reports.zip`).
+
+* **Transição para Quality Gate Estrito:** Assim que a squad remediar as vulnerabilidades detectadas, basta remover as flags de tolerância (`|| true`) para converter a esteira em um portão bloqueador de deploy.
+
+## Como Consultar os Relatórios de Vulnerabilidade
+
+1. Acesse a aba **Actions** no repositório da sua aplicação.
+
+2. Clique na execução da pipeline mais recente.
+
+3. No rodapé da página (seção **Artifacts**), baixe o arquivo **`devsecops-reports.zip`**.
+
+4. Descompacte para analisar:
+
+   * `reports/gitleaks/gitleaks-results.json`
+   * `reports/semgrep/semgrep-results.json`
+   * `reports/trivy/trivy-fs-results.json`
+   * `reports/zap/` (quando DAST estiver ativo)
+
+## Equipe Responsável
+
 * Alexia Josielly Duarte da Silva Alves
 * João Henrique Lopes de Araújo Freire
 * Pedro Henrique Borges Silva
 * Raphaela Samille Ramalho de Oliveira
 * Thiago Farias Leal
-
-## Escopo da Entrega
-A PR desta etapa deve concentrar-se em documentacao, template de PR e workflow base da esteira. A definicao da aplicacao alvo e da validacao local com o tempo sera alinhada com o time em uma entrega posterior.
-
-## Validacao Local - PBI 04
-O passo a passo reproduzivel dos testes feitos para conclusao da PBI 04 esta em [docs/validacao-local-pbi-04.md](docs/validacao-local-pbi-04.md).
-
