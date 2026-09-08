@@ -1,6 +1,6 @@
 # Central DevSecOps - Reusable Workflow (SaaS Interno)
 
-[![Pipeline Base - GitHub Actions](https://github.com/imsamille/esteira-devsecops-central-consolidada/actions/workflows/pipeline.yml/badge.svg)](https://github.com/imsamille/esteira-devsecops-central-consolidada/actions/workflows/pipeline.yml)
+[![Pipeline Base - GitHub Actions](https://github.com/imsamille/esteira-devsecops-central-consolidada/actions/workflows/pipeline.yml/badge.svg)](https://github.com/imsamille/esteira-devsecops-central/actions/workflows/pipeline.yml)
 
 Este repositório centraliza uma esteira DevSecOps modular e reutilizável baseada em GitHub Actions e ferramentas open source. Qualquer squad pode plugar seus repositórios à esteira chamando o workflow central, sem duplicar scripts ou configurações complexas.
 

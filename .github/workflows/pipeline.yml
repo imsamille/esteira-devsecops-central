@@ -41,7 +41,7 @@ jobs:
       - name: Checkout Security Tools (Central DevSecOps)
         uses: actions/checkout@v4
         with:
-          repository: imsamille/esteira-devsecops-central-consolidada
+          repository: imsamille/esteira-devsecops-central
           path: security-tools
 
       - name: Create Reports Directories
