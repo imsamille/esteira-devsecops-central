@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       project_name:
-        description: 'Nome do projeto (usado no DefectDojo)'
+        description: 'Nome do projeto (usado no DefectDojo e identificacao de relatorios)'
         required: true
         type: string
       stack_type:
@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       run_dast:
-        description: 'Executar análise dinâmica (DAST) com OWASP ZAP'
+        description: 'Executar analise dinamica (DAST) com OWASP ZAP'
         required: false
         type: boolean
         default: false
@@ -22,18 +22,18 @@ on:
         type: string
     secrets:
       DEFECTDOJO_URL:
-        description: 'URL do DefectDojo'
-        required: true
+        description: 'URL do DefectDojo (opcional)'
+        required: false
       DEFECTDOJO_API_KEY:
-        description: 'Token de API do DefectDojo'
-        required: true
+        description: 'Token de API do DefectDojo (opcional)'
+        required: false
 
 jobs:
   devsecops-pipeline:
     name: DevSecOps Scans & Quality Gates
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout App Code (Código do Desenvolvedor)
+      - name: Checkout App Code (Codigo do Desenvolvedor)
         uses: actions/checkout@v4
         with:
           path: app-code
@@ -41,7 +41,7 @@ jobs:
       - name: Checkout Security Tools (Central DevSecOps)
         uses: actions/checkout@v4
         with:
-          repository: alexiaduartt/Esteira-DevSecOps-Open-Source
+          repository: imsamille/esteira-devsecops-central-consolidada
           path: security-tools
 
       - name: Create Reports Directories
@@ -54,7 +54,7 @@ jobs:
         with:
           node-version: 20
           
-      - name: Instalar dependências Node.js
+      - name: Instalar dependencias Node.js
         if: inputs.stack_type == 'node'
         working-directory: app-code
         run: npm install || npm ci
@@ -65,7 +65,7 @@ jobs:
         with:
           dotnet-version: '8.0.x'
           
-      - name: Instalar dependências .NET
+      - name: Instalar dependencias .NET
         if: inputs.stack_type == 'dotnet'
         working-directory: app-code
         run: dotnet restore
@@ -76,7 +76,7 @@ jobs:
         with:
           python-version: '3.12'
           
-      - name: Instalar dependências Python
+      - name: Instalar dependencias Python
         if: inputs.stack_type == 'python'
         working-directory: app-code
         run: |
@@ -121,7 +121,7 @@ jobs:
         with:
           go-version: 'stable'
 
-      - name: Instalar dependências Go
+      - name: Instalar dependencias Go
         if: inputs.stack_type == 'go'
         working-directory: app-code
         run: |
@@ -131,7 +131,7 @@ jobs:
         if: inputs.stack_type == 'rust'
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Instalar dependências Rust
+      - name: Instalar dependencias Rust
         if: inputs.stack_type == 'rust'
         working-directory: app-code
         run: |
@@ -154,27 +154,38 @@ jobs:
         run: |
           mkdir -p reports/semgrep
           SEMGREP_CONFIGS="--config p/owasp-top-ten --config /config/rules.yaml"
+          INCLUDE_FLAGS=""
+
           if [ "${{ inputs.stack_type }}" = "node" ]; then
             SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/nodejs"
-          elif [ "${{ inputs.stack_type }}" = "python" ]; then
-            SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/python"
-          elif [ "${{ inputs.stack_type }}" = "java" ]; then
-            SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/java"
+            INCLUDE_FLAGS="--include=*.js --include=*.jsx --include=*.ts --include=*.tsx --include=Dockerfile"
           elif [ "${{ inputs.stack_type }}" = "dotnet" ]; then
             SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/csharp"
+            INCLUDE_FLAGS="--include=*.cs --include=*.csproj --include=Dockerfile"
+          elif [ "${{ inputs.stack_type }}" = "python" ]; then
+            SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/python"
+            INCLUDE_FLAGS="--include=*.py --include=requirements.txt --include=Dockerfile"
+          elif [ "${{ inputs.stack_type }}" = "java" ]; then
+            SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/java"
+            INCLUDE_FLAGS="--include=*.java --include=pom.xml --include=*.gradle --include=Dockerfile"
           elif [ "${{ inputs.stack_type }}" = "cpp" ]; then
             SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/c"
+            INCLUDE_FLAGS="--include=*.c --include=*.cpp --include=*.h --include=*.hpp --include=CMakeLists.txt --include=Dockerfile"
           elif [ "${{ inputs.stack_type }}" = "go" ]; then
             SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/golang"
+            INCLUDE_FLAGS="--include=*.go --include=go.mod --include=Dockerfile"
           elif [ "${{ inputs.stack_type }}" = "rust" ]; then
             SEMGREP_CONFIGS="$SEMGREP_CONFIGS --config p/rust"
+            INCLUDE_FLAGS="--include=*.rs --include=Cargo.toml --include=Dockerfile"
           fi
+
           docker run --rm \
             -v ${{ github.workspace }}/app-code:/src \
             -v ${{ github.workspace }}/security-tools/security/semgrep:/config \
             -v ${{ github.workspace }}/reports/semgrep:/reports \
             semgrep/semgrep semgrep scan \
             $SEMGREP_CONFIGS \
+            $INCLUDE_FLAGS \
             --json \
             --output=/reports/semgrep-results.json \
             /src || true
@@ -196,12 +207,12 @@ jobs:
           target: ${{ inputs.dast_target_url }}
           fail_action: false
 
-      - name: Mover relatórios ZAP
+      - name: Mover relatorios ZAP
         if: inputs.run_dast == true && inputs.dast_target_url != ''
         run: |
           mv report_json.json reports/zap/ 2>/dev/null || true
 
-      - name: Upload Relatórios
+      - name: Upload Relatorios
         uses: actions/upload-artifact@v4
         if: always()
         with:

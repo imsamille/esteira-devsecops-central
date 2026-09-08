@@ -1,0 +1,14 @@
+# Pastas de dependencias e build
+node_modules/
+dist/
+build/
+bin/
+obj/
+.next/
+out/
+
+# Arquivos de lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+*.lock
